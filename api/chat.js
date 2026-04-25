@@ -29,6 +29,10 @@ function getOpenAiKey() {
   ).trim();
 }
 
+function getModel() {
+  return (process.env.OPENAI_MODEL || "gpt-4o-mini").trim();
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const apiKey = getOpenAiKey();
@@ -77,7 +81,7 @@ module.exports = async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5.3",
+        model: getModel(),
         input: [
           { role: "system", content: systemPrompt },
           {
