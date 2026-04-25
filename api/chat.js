@@ -29,19 +29,128 @@ function getOpenAiKey() {
   ).trim();
 }
 
-function getModel() {
+function getGeminiKey() {
+  return (
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    ""
+  ).trim();
+}
+
+function getOpenAiModel() {
   return (process.env.OPENAI_MODEL || "gpt-4o-mini").trim();
+}
+
+function getGeminiModel() {
+  return (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").trim();
+}
+
+function buildStudentPrompt(message, topic) {
+  return `${systemPrompt}
+
+Tema atual: ${topic || "Biologia ENEM"}
+
+Duvida do aluno: ${message}`;
+}
+
+async function askGemini(message, topic) {
+  const apiKey = getGeminiKey();
+  const model = getGeminiModel();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildStudentPrompt(message, topic) }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.45,
+        maxOutputTokens: 900
+      }
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      reply:
+        data.error?.message ||
+        "O Gemini retornou um erro. Confira GEMINI_API_KEY e GEMINI_MODEL no Vercel."
+    };
+  }
+
+  const reply = data.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+
+  return {
+    ok: true,
+    reply: reply || "Recebi sua pergunta, mas nao consegui montar a resposta agora."
+  };
+}
+
+async function askOpenAi(message, topic) {
+  const apiKey = getOpenAiKey();
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: getOpenAiModel(),
+      input: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Tema atual: ${topic || "Biologia ENEM"}\n\nDuvida do aluno: ${message}`
+        }
+      ]
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      reply:
+        data.error?.message ||
+        "A OpenAI retornou um erro. Confira OPENAI_API_KEY e OPENAI_MODEL no Vercel."
+    };
+  }
+
+  return {
+    ok: true,
+    reply: extractText(data) || "Recebi sua pergunta, mas nao consegui montar a resposta agora."
+  };
 }
 
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
-    const apiKey = getOpenAiKey();
+    const openAiKey = getOpenAiKey();
+    const geminiKey = getGeminiKey();
     res.status(200).json({
       ok: true,
       environment: process.env.VERCEL_ENV || "local",
-      hasOpenAiKey: Boolean(apiKey),
-      openAiKeyLength: apiKey.length,
+      provider: geminiKey ? "gemini" : openAiKey ? "openai" : "none",
+      hasGeminiKey: Boolean(geminiKey),
+      geminiKeyLength: geminiKey.length,
+      geminiModel: getGeminiModel(),
+      hasOpenAiKey: Boolean(openAiKey),
+      openAiKeyLength: openAiKey.length,
+      openAiModel: getOpenAiModel(),
       checkedNames: [
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
         "OPENAI_API_KEY",
         "OPENAI_KEY",
         "OPENAI_APIKEY",
@@ -63,49 +172,28 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const apiKey = getOpenAiKey();
+  const geminiKey = getGeminiKey();
+  const openAiKey = getOpenAiKey();
 
-  if (!apiKey) {
+  if (!geminiKey && !openAiKey) {
     res.status(200).json({
       reply:
-        `O tutor IA ainda nao esta configurado neste deploy (${process.env.VERCEL_ENV || "ambiente local"}). No Vercel, adicione OPENAI_API_KEY em Project Settings > Environment Variables, marque Production e faca Redeploy.`
+        `O tutor IA ainda nao esta configurado neste deploy (${process.env.VERCEL_ENV || "ambiente local"}). No Vercel, adicione GEMINI_API_KEY ou OPENAI_API_KEY em Project Settings > Environment Variables, marque Production e faca Redeploy.`
     });
     return;
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: getModel(),
-        input: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `Tema atual: ${topic || "Biologia ENEM"}\n\nDuvida do aluno: ${message}`
-          }
-        ]
-      })
-    });
+    const result = geminiKey
+      ? await askGemini(message, topic)
+      : await askOpenAi(message, topic);
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      res.status(200).json({
-        reply:
-          data.error?.message ||
-          "A IA retornou um erro. Confira a chave OPENAI_API_KEY e o modelo configurado em OPENAI_MODEL."
-      });
+    if (!result.ok) {
+      res.status(200).json({ reply: result.reply });
       return;
     }
 
-    res.status(200).json({
-      reply: extractText(data) || "Recebi sua pergunta, mas nao consegui montar a resposta agora."
-    });
+    res.status(200).json({ reply: result.reply });
   } catch {
     res.status(500).json({ reply: "Nao consegui conectar com a IA agora. Tente novamente em instantes." });
   }
