@@ -19,6 +19,16 @@ function extractText(data) {
   return text?.text || null;
 }
 
+function getOpenAiKey() {
+  return (
+    process.env.OPENAI_API_KEY ||
+    process.env.OPENAI_KEY ||
+    process.env.OPENAI_APIKEY ||
+    process.env.OPENAI_API_TOKEN ||
+    ""
+  ).trim();
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ reply: "Use uma requisicao POST para conversar com o tutor." });
@@ -32,10 +42,12 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = getOpenAiKey();
+
+  if (!apiKey) {
     res.status(200).json({
       reply:
-        "O tutor IA ainda nao esta configurado. No Vercel, adicione a variavel OPENAI_API_KEY em Settings > Environment Variables e faca um novo deploy."
+        `O tutor IA ainda nao esta configurado neste deploy (${process.env.VERCEL_ENV || "ambiente local"}). No Vercel, adicione OPENAI_API_KEY em Project Settings > Environment Variables, marque Production e faca Redeploy.`
     });
     return;
   }
@@ -44,7 +56,7 @@ module.exports = async function handler(req, res) {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
