@@ -19,7 +19,7 @@ function extractText(data) {
   return text?.text || null;
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ reply: "Use uma requisicao POST para conversar com o tutor." });
     return;
@@ -76,4 +76,4 @@ export default async function handler(req, res) {
   } catch {
     res.status(500).json({ reply: "Nao consegui conectar com a IA agora. Tente novamente em instantes." });
   }
-}
+};
