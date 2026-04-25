@@ -24,12 +24,24 @@ Acesse: http://localhost:3000
 
 ## Configurar o tutor IA no Vercel
 
-1. No painel do projeto no Vercel, abra `Settings > Environment Variables`.
-2. Adicione `OPENAI_API_KEY` com sua chave da OpenAI.
-3. Opcional: adicione `OPENAI_MODEL` para escolher o modelo usado pelo tutor. Se nao definir, o app usa `gpt-4o-mini`.
-4. Faca um novo deploy.
+Opcao gratuita para testes: Gemini API, do Google.
 
-Sem `OPENAI_API_KEY`, o app continua funcionando e mostra um aviso amigavel no chat.
+1. Acesse [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Crie uma API key.
+3. No Vercel, abra `Settings > Environment Variables`.
+4. Adicione `GEMINI_API_KEY` com a chave criada.
+5. Marque `Production`.
+6. Faca um novo deploy.
+
+Opcional: adicione `GEMINI_MODEL` para escolher o modelo. Se nao definir, o app usa `gemini-2.5-flash-lite`.
+
+Tambem e possivel usar OpenAI:
+
+1. Adicione `OPENAI_API_KEY` com sua chave da OpenAI.
+2. Opcional: adicione `OPENAI_MODEL` para escolher o modelo. Se nao definir, o app usa `gpt-4o-mini`.
+3. Faca um novo deploy.
+
+Sem `GEMINI_API_KEY` ou `OPENAI_API_KEY`, o app continua funcionando e mostra um aviso amigavel no chat.
 
 ## Publicar no Vercel
 
