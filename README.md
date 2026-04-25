@@ -26,7 +26,7 @@ Acesse: http://localhost:3000
 
 1. No painel do projeto no Vercel, abra `Settings > Environment Variables`.
 2. Adicione `OPENAI_API_KEY` com sua chave da OpenAI.
-3. Opcional: adicione `OPENAI_MODEL` para escolher o modelo usado pelo tutor.
+3. Opcional: adicione `OPENAI_MODEL` para escolher o modelo usado pelo tutor. Se nao definir, o app usa `gpt-4o-mini`.
 4. Faca um novo deploy.
 
 Sem `OPENAI_API_KEY`, o app continua funcionando e mostra um aviso amigavel no chat.
