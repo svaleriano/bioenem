@@ -30,6 +30,23 @@ function getOpenAiKey() {
 }
 
 module.exports = async function handler(req, res) {
+  if (req.method === "GET") {
+    const apiKey = getOpenAiKey();
+    res.status(200).json({
+      ok: true,
+      environment: process.env.VERCEL_ENV || "local",
+      hasOpenAiKey: Boolean(apiKey),
+      openAiKeyLength: apiKey.length,
+      checkedNames: [
+        "OPENAI_API_KEY",
+        "OPENAI_KEY",
+        "OPENAI_APIKEY",
+        "OPENAI_API_TOKEN"
+      ]
+    });
+    return;
+  }
+
   if (req.method !== "POST") {
     res.status(405).json({ reply: "Use uma requisicao POST para conversar com o tutor." });
     return;
